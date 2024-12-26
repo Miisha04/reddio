@@ -7,3 +7,4 @@
 - [ ] Review and refactor code
 - [ ] Improve logging for better debugging
 - [ ] Add `requirements.txt` for dependencies
+- [ ] Implement withdraw 
