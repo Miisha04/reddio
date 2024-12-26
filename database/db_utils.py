@@ -8,12 +8,12 @@ db_path = os.path.join(base_dir, 'database.db')
 conn = sqlite3.connect(db_path)
 cursor = conn.cursor()
 
-def add_account(wallet_address, private_key, is_register, twitter_state, twitter_auth_token):
+def add_account(wallet_address, private_key, is_register, twitter_auth_token):
     try:
         cursor.execute('''
-        INSERT INTO accounts (wallet_address, private_key, is_register, twitter_state, twitter_auth_token)
-        VALUES (?, ?, ?, ?, ?)
-        ''', (wallet_address, private_key, is_register, twitter_state, twitter_auth_token))
+        INSERT INTO accounts (wallet_address, private_key, is_register, twitter_auth_token)
+        VALUES (?, ?, ?, ?)
+        ''', (wallet_address, private_key, is_register, twitter_auth_token))
         conn.commit()
         print("Account added successfully!\n")
     except sqlite3.Error as e:
@@ -89,21 +89,6 @@ def get_auth_token(wallet_address: str):
         print(f"Error: {e}\n")
         return "" 
     
-
-def get_state(wallet_address: str):
-    try:
-        cursor.execute('''SELECT twitter_state FROM accounts WHERE wallet_address = ? AND is_register = 'TRUE' ''', (wallet_address,))
-        result = cursor.fetchone()
-
-        if result:
-            return result[0]  
-        else:
-            print(f"No registered wallet found for {wallet_address}")
-            return ""  
-    except sqlite3.Error as e:
-        print(f"Error: {e}\n")
-        return "" 
-
 
 def get_private_key(wallet_address: str):
     try:

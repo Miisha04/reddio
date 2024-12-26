@@ -14,7 +14,6 @@ def initialize_database():
         wallet_address TEXT UNIQUE NOT NULL,
         private_key TEXT UNIQUE NOT NULL,
         is_register TEXT CHECK(is_register IN ('TRUE', 'FALSE')) DEFAULT 'FALSE',
-        twitter_state TEXT UNIQUE NOT NULL,
         twitter_auth_token TEXT UNIQUE NOT NULL
     );
     ''')

@@ -8,7 +8,7 @@ from clientAsync import AsyncClient
 from config import ETH_SEPOLIA_RPC, CLIENT_ID
 from models import TokenAmount
 from database.db_utils import add_account, delete_account, print_all_accounts, update_account
-from database.db_utils import get_unregistered_wallets, get_registered_wallets, get_auth_token, get_state, get_private_key
+from database.db_utils import get_unregistered_wallets, get_registered_wallets, get_auth_token, get_private_key
 from database.init_db import initialize_database
 
 
@@ -45,6 +45,40 @@ async def send_pre_register(wallet_address: str):
     except Exception as e:
         logger.error(f"Request failed: {e}")
         return {"error": str(e)} 
+    
+
+async def get_state(wallet_address: str) -> str:
+    url = "https://points-mainnet.reddio.com/v1/login/twitter"
+
+    payload = {
+        "wallet_address": wallet_address
+    }
+
+    headers = {
+        "Accept": "application/json, text/plain, */*",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 OPR/114.0.0.0 (Edition Yx GX)",
+        "Referer": "https://points.reddio.com/",
+        "Sec-CH-UA": '"Chromium";v="128", "Not;A=Brand";v="24", "Opera GX";v="114"',
+        "Sec-CH-UA-Mobile": "?0",
+        "Sec-CH-UA-Platform": '"Windows"'
+    }
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers, json=payload) as response:
+                if response.status == 200:
+                    response_json = await response.json()
+                    #logger.info("Response JSON: %s", response_json)
+                    state = response_json.get("data", {}).get("url", "").split("state=")[-1].split("&")[0]
+                    #logger.info("Extracted state: %s", state)
+                    return state
+                else:
+                    error_message = await response.json()
+                    logger.warning(f"Error: {response.status} - {error_message}")
+                    return error_message.get("error", "Unknown error")
+    except Exception as e:
+        logger.error(f"Request failed: {e}")
+        return {"error": str(e)}
 
 
 async def auth_twitter(auth_token: str, state: str):
@@ -193,8 +227,7 @@ async def main():
                 wallet_address = input("Enter wallet address: ").strip()
                 private_key = input("Enter private key : ").strip()
                 auth_token = input("Enter auth token: ").strip()
-                state = input("Enter state: ").strip()
-                add_account(wallet_address=wallet_address, private_key=private_key, is_register="FALSE", twitter_auth_token=auth_token, twitter_state=state)
+                add_account(wallet_address=wallet_address, private_key=private_key, is_register="FALSE", twitter_auth_token=auth_token)
             case "3":
                 print_all_accounts()
             case "4":
@@ -237,7 +270,8 @@ async def main():
 
                 if registered_wallets:
                     for wallet_address in registered_wallets:
-                        await auth_twitter(auth_token=get_auth_token(wallet_address), state=get_state(wallet_address))
+                        state = await get_state(wallet_address)
+                        await auth_twitter(auth_token=get_auth_token(wallet_address), state=state)
             case "0":
                 logger.info("Exiting the program.")
                 break
