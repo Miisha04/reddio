@@ -6,13 +6,13 @@ import os
 base_dir = os.path.dirname(os.path.abspath(__file__))
 db_path = os.path.join(base_dir, 'database.db')
 
-async def add_account(wallet_address, private_key, is_register, twitter_auth_token):
+async def add_account(wallet_address, private_key, is_register, twitter_auth_token, user_agent):
     async with aiosqlite.connect(db_path) as conn:
         try:
             await conn.execute('''
-            INSERT INTO accounts (wallet_address, private_key, is_register, twitter_auth_token)
-            VALUES (?, ?, ?, ?)
-            ''', (wallet_address, private_key, is_register, twitter_auth_token))
+            INSERT INTO accounts (wallet_address, private_key, is_register, twitter_auth_token, user_agent)
+            VALUES (?, ?, ?, ?, ?)
+            ''', (wallet_address, private_key, is_register, twitter_auth_token, user_agent))
             await conn.commit()
             print("Account added successfully!\n")
         except aiosqlite.Error as e:
@@ -89,7 +89,7 @@ async def get_auth_token(wallet_address: str) -> str:
                 if result:
                     return result[0]
                 else:
-                    print(f"No registered wallet found for {wallet_address}")
+                    print(f"Cant get token for {wallet_address}")
                     return ""
         except aiosqlite.Error as e:
             print(f"Error: {e}\n")
@@ -106,7 +106,25 @@ async def get_private_key(wallet_address: str) -> str:
                 if result:
                     return result[0]
                 else:
-                    print(f"No registered wallet found for {wallet_address}")
+                    print(f"Cant get key for {wallet_address}")
+                    return ""
+        except aiosqlite.Error as e:
+            print(f"Error: {e}\n")
+            return ""
+
+
+async def get_user_agent(wallet_address: str) -> str:
+    async with aiosqlite.connect(db_path) as conn:
+        try:
+            async with conn.execute('''
+            SELECT user_agent FROM accounts WHERE wallet_address = ?
+            ''', (wallet_address,)) as cursor:
+                result = await cursor.fetchone()
+
+                if result:
+                    return result[0]
+                else:
+                    print(f"Cant get user_agent for {wallet_address}")
                     return ""
         except aiosqlite.Error as e:
             print(f"Error: {e}\n")

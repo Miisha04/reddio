@@ -3,19 +3,20 @@ import logging
 import aiohttp
 import random
 import twitter
+from user_agent import generate_user_agent
 from reddioAsync import Reddio
 from clientAsync import AsyncClient
 from config import ETH_SEPOLIA_RPC, CLIENT_ID
 from models import TokenAmount
 from database.db_utils import add_account, delete_account, print_all_accounts, update_account
-from database.db_utils import get_unregistered_wallets, get_registered_wallets, get_auth_token, get_private_key
+from database.db_utils import get_unregistered_wallets, get_registered_wallets, get_auth_token, get_private_key, get_user_agent
 from database.init_db import initialize_database
 
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-async def send_pre_register(wallet_address: str) -> str:
+async def send_pre_register(wallet_address: str, user_agent: str) -> str:
     url = "https://points-mainnet.reddio.com/v1/pre_register"
 
     payload = {
@@ -24,7 +25,7 @@ async def send_pre_register(wallet_address: str) -> str:
 
     headers = {
         "Accept": "application/json, text/plain, */*",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 OPR/114.0.0.0 (Edition Yx GX)",
+        "User-Agent": user_agent,
         "Referer": "https://points.reddio.com/",
         "Sec-CH-UA": '"Chromium";v="128", "Not;A=Brand";v="24", "Opera GX";v="114"',
         "Sec-CH-UA-Mobile": "?0",
@@ -47,7 +48,7 @@ async def send_pre_register(wallet_address: str) -> str:
         return {"error": str(e)} 
     
 
-async def get_state(wallet_address: str) -> str:
+async def get_state(wallet_address: str, user_agent: str) -> str:
     url = "https://points-mainnet.reddio.com/v1/login/twitter"
 
     payload = {
@@ -56,7 +57,7 @@ async def get_state(wallet_address: str) -> str:
 
     headers = {
         "Accept": "application/json, text/plain, */*",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 OPR/114.0.0.0 (Edition Yx GX)",
+        "User-Agent": user_agent,
         "Referer": "https://points.reddio.com/",
         "Sec-CH-UA": '"Chromium";v="128", "Not;A=Brand";v="24", "Opera GX";v="114"',
         "Sec-CH-UA-Mobile": "?0",
@@ -81,7 +82,7 @@ async def get_state(wallet_address: str) -> str:
         return {"error": str(e)}
 
 
-async def auth_twitter(auth_token: str, state: str):
+async def auth_twitter(auth_token: str, state: str, user_agent: str):
     twitter_account = twitter.Account(auth_token=auth_token)
     async with twitter.Client(
         twitter_account, 
@@ -112,7 +113,7 @@ async def auth_twitter(auth_token: str, state: str):
         }
 
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 YaBrowser/24.12.0.0 Safari/537.36',
+            'User-Agent': user_agent,
             'Referer': 'https://twitter.com/',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
             'Accept-Encoding': 'gzip, deflate, br, zstd',
@@ -162,7 +163,7 @@ async def doTrans(wallet_address: str, private_key: str):
         logger.error(f"Unexpected error in verif_tx function: {e}", exc_info=True)
 
 
-async def claim_red(wallet_address: str):
+async def claim_red(wallet_address: str, user_agent: str):
     url = "https://testnet-faucet.reddio.com/api/claim/new"
     
     headers = {
@@ -178,7 +179,7 @@ async def claim_red(wallet_address: str):
         "sec-fetch-dest": "empty",
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-origin",
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 OPR/114.0.0.0 (Edition Yx GX)",
+        "user-agent": user_agent,
         "cookie": "_ga=GA1.1.881854413.1734472555; _ga_15513WPM38=GS1.1.1734606432.12.1.1734606913.0.0.0"
     }
 
@@ -227,7 +228,12 @@ async def main():
                 wallet_address = input("Enter wallet address: ").strip()
                 private_key = input("Enter private key : ").strip()
                 auth_token = input("Enter auth token: ").strip()
-                await add_account(wallet_address=wallet_address, private_key=private_key, is_register="FALSE", twitter_auth_token=auth_token)
+                user_agent = generate_user_agent()
+                await add_account(wallet_address=wallet_address, 
+                                  private_key=private_key, 
+                                  is_register="FALSE", 
+                                  twitter_auth_token=auth_token,
+                                  user_agent=user_agent)
             case "3":
                 await print_all_accounts()
             case "4":
@@ -237,7 +243,8 @@ async def main():
                 await doTrans()
             case "6":
                 wallet_address = input("Enter wallet address to claim RED: ").strip()
-                await claim_red(wallet_address)
+                user_agent = await get_user_agent(wallet_address)
+                await claim_red(wallet_address, user_agent)
             case "7":
                 unregistered_wallets = await get_unregistered_wallets()
 
@@ -245,7 +252,8 @@ async def main():
                     print("No unregistered accounts found.\n")
                 else:
                     for wallet_address in unregistered_wallets:
-                        res = await send_pre_register(wallet_address)
+                        user_agent = await get_user_agent(wallet_address)
+                        res = await send_pre_register(wallet_address, user_agent)
                         if res == "User already pre registered" or res == "OK":
                             await update_account(wallet_address=wallet_address, field="is_register", new_value="TRUE")
                             print(f"for wallet: {wallet_address}, error: {res}, is_register was updated\n")
@@ -262,7 +270,8 @@ async def main():
 
                 if registered_wallets:
                     for wallet_address in registered_wallets:
-                        await claim_red(wallet_address)
+                        user_agent = await get_user_agent(wallet_address)
+                        await claim_red(wallet_address, user_agent)
                         private_key = await get_private_key(wallet_address)
                         await doTrans(wallet_address=wallet_address, private_key=private_key)
 
@@ -271,9 +280,11 @@ async def main():
 
                 if registered_wallets:
                     for wallet_address in registered_wallets:
-                        state = await get_state(wallet_address)
+                        user_agent = await get_user_agent(wallet_address)
+                        state = await get_state(wallet_address, user_agent)
                         auth_token = await get_auth_token(wallet_address)
-                        await auth_twitter(auth_token=auth_token, state=state)
+                        user_agent = await get_user_agent(wallet_address)
+                        await auth_twitter(auth_token=auth_token, state=state, user_agent=user_agent)
             case "0":
                 logger.info("Exiting the program.")
                 break
