@@ -13,8 +13,12 @@ from database.db_utils import get_unregistered_wallets, get_registered_wallets, 
 from database.init_db import initialize_database
 
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+
 
 async def send_pre_register(wallet_address: str, user_agent: str) -> str:
     url = "https://points-mainnet.reddio.com/v1/pre_register"
@@ -37,14 +41,14 @@ async def send_pre_register(wallet_address: str, user_agent: str) -> str:
             async with session.post(url, headers=headers, json=payload) as response:
                 if response.status == 200:
                     #response_json = await response.json()
-                    #logger.info("Response JSON: %s", response_json)
+                    #logging.info("Response JSON: %s", response_json)
                     return "OK"
                 else:
                     error_message = await response.json()
-                    #logger.warning(f"Error: {response.status} - {error_message}")
+                    #logging.warning(f"Error: {response.status} - {error_message}")
                     return error_message.get("error", "Unknown error")
     except Exception as e:
-        logger.error(f"Request failed: {e}")
+        logging.error(f"Request failed: {e}")
         return {"error": str(e)} 
     
 
@@ -69,16 +73,16 @@ async def get_state(wallet_address: str, user_agent: str) -> str:
             async with session.get(url, headers=headers, json=payload) as response:
                 if response.status == 200:
                     response_json = await response.json()
-                    #logger.info("Response JSON: %s", response_json)
+                    #logging.info("Response JSON: %s", response_json)
                     state = response_json.get("data", {}).get("url", "").split("state=")[-1].split("&")[0]
-                    #logger.info("Extracted state: %s", state)
+                    #logging.info("Extracted state: %s", state)
                     return state
                 else:
                     error_message = await response.json()
-                    logger.warning(f"Error: {response.status} - {error_message}")
+                    logging.warning(f"Error: {response.status} - {error_message}")
                     return error_message.get("error", "Unknown error")
     except Exception as e:
-        logger.error(f"Request failed: {e}")
+        logging.error(f"Request failed: {e}")
         return {"error": str(e)}
 
 
@@ -149,18 +153,18 @@ async def doTrans(wallet_address: str, private_key: str):
     escrow_fee = TokenAmount(amount=fee)
 
     try:
-        logger.info("Starting depositETH transaction...")
+        logging.info("Starting depositETH transaction...")
         tx = await reddio.depositETH(amount=amount, escrow_fee=escrow_fee)
     except Exception as e:
-        logger.error(f"Error during deposit: {e}", exc_info=True)
+        logging.error(f"Error during deposit: {e}", exc_info=True)
         return 
 
     try:
-        logger.info("Verifying transaction...")
+        logging.info("Verifying transaction...")
         res = await reddio.client.verif_tx(tx_hash=tx)
-        logger.info(f"Transaction verification result: {res}")
+        logging.info(f"Transaction verification result: {res}")
     except Exception as e:
-        logger.error(f"Unexpected error in verif_tx function: {e}", exc_info=True)
+        logging.error(f"Unexpected error in verif_tx function: {e}", exc_info=True)
 
 
 async def claim_red(wallet_address: str, user_agent: str):
@@ -189,18 +193,18 @@ async def claim_red(wallet_address: str, user_agent: str):
     }
 
     try:
-        logger.info("Starting RED claim request...")
+        logging.info("Starting RED claim request...")
         async with aiohttp.ClientSession() as session:
             async with session.post(url, headers=headers, json=payload, timeout=200) as response:
-                logger.info(f"Status Code: {response.status}")
+                logging.info(f"Status Code: {response.status}")
                 
                 if response.status == 200:
                     response_data = await response.json()
-                    logger.info(f"Response Body: {response_data}")
+                    logging.info(f"Response Body: {response_data}")
                 else:
-                    logger.warning(f"Failed to claim RED: Status Code {response.status}")
+                    logging.warning(f"Failed to claim RED: Status Code {response.status}")
     except Exception as e:
-        logger.error(f"Error during RED claim: {e}", exc_info=True)
+        logging.error(f"Error during RED claim: {e}", exc_info=True)
 
 async def main():
     MENU = (
@@ -286,10 +290,10 @@ async def main():
                         user_agent = await get_user_agent(wallet_address)
                         await auth_twitter(auth_token=auth_token, state=state, user_agent=user_agent)
             case "0":
-                logger.info("Exiting the program.")
+                logging.info("Exiting the program.")
                 break
             case _:
-                logger.warning("Invalid choice, please try again.")
+                logging.warning("Invalid choice, please try again.")
 
 
 if __name__ == "__main__":

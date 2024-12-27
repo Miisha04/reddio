@@ -1,5 +1,12 @@
 import sqlite3
 import os
+import logging
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 
 def initialize_database():
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -19,8 +26,7 @@ def initialize_database():
     );
     ''')
 
-
     conn.commit()
     conn.close()
 
-    print(f"База данных создана по пути: {db_path}")
+    logging.info(f"База данных создана по пути: {db_path}")
