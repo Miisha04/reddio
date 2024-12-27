@@ -1,0 +1,9 @@
+asyncio
+logging
+aiohttp
+random
+sqlite3
+aiosqlite
+web3
+user-agent
+git+https://github.com/T1murKO/tweepy-self.git
