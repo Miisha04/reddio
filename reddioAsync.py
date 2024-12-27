@@ -73,26 +73,26 @@ class Reddio:
         except Exception as e:
             logging.error(f"Error in withdraw_eth: {e}")
             return None
+        
 
-    # Uncomment and use the following method if needed
-    # async def withdraw_red(self):
-    #     try:
-    #         contract = self.client.w3.eth.contract(
-    #             abi=Reddio.withdraw_abi,
-    #             address=Reddio.router_address
-    #         )
+    async def withdraw_red(self):
+        try:
+            contract = self.client.w3.eth.contract(
+                abi=Reddio.withdraw_abi,
+                address=Reddio.router_address
+            )
 
-    #         data = contract.encode_abi(
-    #             'withdrawRED',
-    #             args=(
-    #                 self.wallet_address
-    #             )
-    #         )
+            data = contract.encode_abi(
+                'withdrawRED',
+                args=(
+                    self.wallet_address,
+                )
+            )
 
-    #         return await self.client.send_transaction(
-    #             to=Reddio.router_address,
-    #             data=data
-    #         )
-    #     except Exception as e:
-    #         logging.error(f"Error in withdraw_red: {e}")
-    #         return None
+            return await self.client.send_transaction(
+                to=Reddio.router_address,
+                data=data
+            )
+        except Exception as e:
+            logging.error(f"Error in withdraw_red: {e}")
+            return None

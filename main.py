@@ -15,7 +15,7 @@ from database.init_db import initialize_database
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-async def send_pre_register(wallet_address: str):
+async def send_pre_register(wallet_address: str) -> str:
     url = "https://points-mainnet.reddio.com/v1/pre_register"
 
     payload = {
@@ -138,7 +138,7 @@ async def doTrans(wallet_address: str, private_key: str):
     balance = await client.get_balance()
     percentage = random.uniform(1, 3) / 100
     amount = balance * percentage
-    fee = amount/40
+    fee = amount/20
 
     print(amount)
     print(fee)
@@ -227,19 +227,19 @@ async def main():
                 wallet_address = input("Enter wallet address: ").strip()
                 private_key = input("Enter private key : ").strip()
                 auth_token = input("Enter auth token: ").strip()
-                add_account(wallet_address=wallet_address, private_key=private_key, is_register="FALSE", twitter_auth_token=auth_token)
+                await add_account(wallet_address=wallet_address, private_key=private_key, is_register="FALSE", twitter_auth_token=auth_token)
             case "3":
-                print_all_accounts()
+                await print_all_accounts()
             case "4":
                 wallet_address = input("Enter wallet address: ").strip()
-                delete_account(wallet_address=wallet_address)
+                await delete_account(wallet_address=wallet_address)
             case "5":
                 await doTrans()
             case "6":
                 wallet_address = input("Enter wallet address to claim RED: ").strip()
                 await claim_red(wallet_address)
             case "7":
-                unregistered_wallets = get_unregistered_wallets()
+                unregistered_wallets = await get_unregistered_wallets()
 
                 if not unregistered_wallets:
                     print("No unregistered accounts found.\n")
@@ -247,7 +247,7 @@ async def main():
                     for wallet_address in unregistered_wallets:
                         res = await send_pre_register(wallet_address)
                         if res == "User already pre registered" or res == "OK":
-                            update_account(wallet_address=wallet_address, field="is_register", new_value="TRUE")
+                            await update_account(wallet_address=wallet_address, field="is_register", new_value="TRUE")
                             print(f"for wallet: {wallet_address}, error: {res}, is_register was updated\n")
                         else:
                             print(f"for wallet: {wallet_address}, error: {res}\n")
@@ -255,23 +255,25 @@ async def main():
                 wallet_address = input("Enter wallet address: ").strip()
                 field = input("Enter field : ").strip()
                 new_value = input("Enter new_value: ").strip()
-                update_account(wallet_address=wallet_address, field=field, new_value=new_value)
+                await update_account(wallet_address=wallet_address, field=field, new_value=new_value)
                 print(f"wallet {wallet_address} was updated\n")
             case "9":
-                registered_wallets = get_registered_wallets()
+                registered_wallets = await get_registered_wallets()
 
                 if registered_wallets:
                     for wallet_address in registered_wallets:
                         await claim_red(wallet_address)
-                        await doTrans(wallet_address=wallet_address, private_key=get_private_key(wallet_address))
+                        private_key = await get_private_key(wallet_address)
+                        await doTrans(wallet_address=wallet_address, private_key=private_key)
 
             case "10":
-                registered_wallets = get_registered_wallets()
+                registered_wallets = await get_registered_wallets()
 
                 if registered_wallets:
                     for wallet_address in registered_wallets:
                         state = await get_state(wallet_address)
-                        await auth_twitter(auth_token=get_auth_token(wallet_address), state=state)
+                        auth_token = await get_auth_token(wallet_address)
+                        await auth_twitter(auth_token=auth_token, state=state)
             case "0":
                 logger.info("Exiting the program.")
                 break
